@@ -1,10 +1,10 @@
 // 사이트 전역 상수. 여기만 고치면 헤더/푸터/메타에 반영된다.
 export const SITE = {
-  title: '최한글',
+  title: 'hgeul',
   // 헤더 로고 옆/타이틀에 쓰이는 짧은 태그라인
-  tagline: '백엔드 · AI 시스템 엔지니어링',
+  tagline: 'BUILD & COLLECT',
   description:
-    '백엔드와 AI 시스템을 만들며 얻은 결정·교훈·트러블슈팅을 기록하는 기술 블로그.',
+    '좋은 글, 나의 속도로 넓혀가는 작은 코스모스.',
   author: '최한글',
   // 절대 URL 생성용 (astro.config 의 site 와 일치)
   url: 'https://hgeul.github.io',

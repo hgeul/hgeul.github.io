@@ -8,7 +8,9 @@ const isActive = (href: string) => path === href || (href !== '/' && path.starts
 <header class="site-header">
   <div class="container bar">
     <a href="/" class="brand" aria-label="홈">
-      <span class="mark">◆</span>
+      <svg class="mark" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+        <path d="M12 0 L14.6 9.4 L24 12 L14.6 14.6 L12 24 L9.4 14.6 L0 12 L9.4 9.4 Z" fill="currentColor" />
+      </svg>
       <span class="name">{SITE.title}</span>
     </a>
 
@@ -38,8 +40,8 @@ const isActive = (href: string) => path === href || (href !== '/' && path.starts
     justify-content: space-between;
     height: 68px;
   }
-  .brand { display: inline-flex; align-items: baseline; gap: .55rem; }
-  .mark { color: var(--accent); font-size: .9rem; transform: translateY(-1px); }
+  .brand { display: inline-flex; align-items: center; gap: .5rem; }
+  .mark { color: var(--accent); flex: none; }
   .name {
     font-family: var(--font-display);
     font-weight: 600;
