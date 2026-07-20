@@ -1,4 +1,4 @@
-# chg9252.github.io
+# hgeul.github.io
 
 최한글 개인 기술 블로그. Astro + GitHub Pages. 글은 마크다운 한 파일, 배포는 `git push` 한 번.
 

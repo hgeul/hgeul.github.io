@@ -7,7 +7,7 @@ export const SITE = {
     '백엔드와 AI 시스템을 만들며 얻은 결정·교훈·트러블슈팅을 기록하는 기술 블로그.',
   author: '최한글',
   // 절대 URL 생성용 (astro.config 의 site 와 일치)
-  url: 'https://chg9252.github.io',
+  url: 'https://hgeul.github.io',
   lang: 'ko',
 };
 
@@ -17,6 +17,6 @@ export const NAV = [
 ];
 
 export const SOCIAL = [
-  { label: 'GitHub', href: 'https://github.com/chg9252' },
+  { label: 'GitHub', href: 'https://github.com/hgeul' },
   // 필요 시 추가: { label: 'LinkedIn', href: '...' },
 ];
