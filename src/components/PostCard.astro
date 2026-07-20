@@ -1,0 +1,65 @@
+---
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+  href: string;
+  title: string;
+  description?: string;
+  pubDate: Date;
+  tags?: string[];
+  index?: number;
+}
+const { href, title, description, pubDate, tags = [], index = 0 } = Astro.props;
+---
+
+<article class="card rise" style={`animation-delay:${Math.min(index, 8) * 60}ms`}>
+  <a href={href} class="hit" aria-label={title}></a>
+  <div class="top">
+    <FormattedDate date={pubDate} />
+    <span class="arrow" aria-hidden="true">→</span>
+  </div>
+  <h3 class="title">{title}</h3>
+  {description && <p class="desc">{description}</p>}
+  {tags.length > 0 && (
+    <div class="tags">
+      {tags.slice(0, 4).map((t) => <span class="tag">{t}</span>)}
+    </div>
+  )}
+</article>
+
+<style>
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: .7rem;
+    padding: 1.5rem 1.6rem 1.55rem;
+    background: var(--paper-card);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    transition: border-color .25s var(--ease), transform .25s var(--ease), box-shadow .25s var(--ease);
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow);
+  }
+  .hit { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+  .top {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: .74rem; letter-spacing: .02em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .arrow { color: var(--ink-faint); transition: transform .25s var(--ease), color .25s var(--ease); }
+  .card:hover .arrow { color: var(--accent); transform: translate(3px, -3px); }
+  .title {
+    font-size: 1.32rem;
+    line-height: 1.25;
+    transition: color .2s var(--ease);
+  }
+  .card:hover .title { color: var(--accent); }
+  .desc { color: var(--ink-soft); font-size: .98rem; line-height: 1.6; }
+  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; position: relative; z-index: 2; }
+</style>

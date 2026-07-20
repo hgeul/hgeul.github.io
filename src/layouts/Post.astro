@@ -1,0 +1,51 @@
+---
+import Base from './Base.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props { post: CollectionEntry<'blog'>; }
+const { post } = Astro.props;
+const { title, description, pubDate, updatedDate, tags } = post.data;
+---
+
+<Base title={title} description={description}>
+  <article class="container reading post">
+    <header class="post-head rise">
+      <div class="meta mono">
+        <FormattedDate date={pubDate} />
+        {updatedDate && <span> · 수정 <FormattedDate date={updatedDate} /></span>}
+      </div>
+      <h1>{title}</h1>
+      {description && <p class="lede">{description}</p>}
+      {tags.length > 0 && (
+        <div class="tags">
+          {tags.map((t) => <a href={`/blog?tag=${encodeURIComponent(t)}`} class="tag">{t}</a>)}
+        </div>
+      )}
+    </header>
+
+    <div class="prose rise" style="animation-delay:120ms">
+      <slot />
+    </div>
+
+    <footer class="post-foot">
+      <a href="/blog" class="btn">← 목록으로</a>
+    </footer>
+  </article>
+</Base>
+
+<style>
+  .post { padding-block: clamp(2.5rem, 6vw, 4.5rem); }
+  .post-head { margin-bottom: 2.6rem; }
+  .meta { margin-bottom: 1.1rem; }
+  .post-head h1 { margin-bottom: .8rem; }
+  .lede {
+    font-size: 1.22rem;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.3rem; }
+  .post-foot { margin-top: 3.5rem; padding-top: 1.8rem; border-top: 1px solid var(--line); }
+</style>

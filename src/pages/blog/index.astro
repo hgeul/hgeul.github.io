@@ -1,0 +1,86 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostCard from '../../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// 태그 집계
+const tagCounts = new Map<string, number>();
+for (const p of posts) for (const t of p.data.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<Base title="글" description="백엔드 · AI 시스템 엔지니어링 기록 전체 목록">
+  <section class="container list">
+    <header class="head rise">
+      <h1>글</h1>
+      <p class="mono count">총 {posts.length}편</p>
+    </header>
+
+    {allTags.length > 0 && (
+      <div class="tagbar rise" style="animation-delay:60ms">
+        <a href="/blog" class="tag" data-all>전체</a>
+        {allTags.map(([t, n]) => (
+          <a href={`/blog?tag=${encodeURIComponent(t)}`} class="tag" data-tag={t}>{t} <span class="n">{n}</span></a>
+        ))}
+      </div>
+    )}
+
+    <div class="grid" id="post-grid">
+      {posts.map((post, i) => (
+        <div class="cell" data-tags={post.data.tags.join('|')}>
+          <PostCard
+            href={`/blog/${post.id}/`}
+            title={post.data.title}
+            description={post.data.description}
+            pubDate={post.data.pubDate}
+            tags={post.data.tags}
+            index={i}
+          />
+        </div>
+      ))}
+    </div>
+    <p class="empty" id="empty" hidden>해당 태그의 글이 없습니다.</p>
+  </section>
+</Base>
+
+<style>
+  .list { padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(3.5rem, 8vw, 6rem); }
+  .head { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 1.6rem; }
+  .count { color: var(--ink-faint); }
+  .tagbar {
+    display: flex; flex-wrap: wrap; gap: .5rem;
+    padding-bottom: 1.6rem; margin-bottom: 1.8rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .tag .n { color: var(--ink-faint); margin-left: .2em; }
+  .tag.is-active { border-color: var(--accent); color: var(--accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.1rem; }
+  .cell[hidden] { display: none; }
+  .empty { color: var(--ink-faint); padding: 2rem 0; }
+</style>
+
+<script is:inline>
+  // URL ?tag= 로 클라이언트 사이드 필터 (정적 페이지 + 가벼운 JS)
+  (() => {
+    const params = new URLSearchParams(location.search);
+    const active = params.get('tag');
+    const cells = document.querySelectorAll('#post-grid .cell');
+    const empty = document.getElementById('empty');
+    let shown = 0;
+    cells.forEach((cell) => {
+      const tags = (cell.getAttribute('data-tags') || '').split('|');
+      const match = !active || tags.includes(active);
+      cell.hidden = !match;
+      if (match) shown++;
+    });
+    if (empty) empty.hidden = shown !== 0;
+    document.querySelectorAll('.tagbar .tag').forEach((el) => {
+      const t = el.getAttribute('data-tag');
+      const isAll = el.hasAttribute('data-all');
+      if ((active && t === active) || (!active && isAll)) el.classList.add('is-active');
+    });
+  })();
+</script>

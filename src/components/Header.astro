@@ -1,0 +1,69 @@
+---
+import { SITE, NAV } from '../consts';
+import ThemeToggle from './ThemeToggle.astro';
+const path = Astro.url.pathname;
+const isActive = (href: string) => path === href || (href !== '/' && path.startsWith(href));
+---
+
+<header class="site-header">
+  <div class="container bar">
+    <a href="/" class="brand" aria-label="홈">
+      <span class="mark">◆</span>
+      <span class="name">{SITE.title}</span>
+    </a>
+
+    <nav class="nav" aria-label="주 메뉴">
+      {NAV.map((item) => (
+        <a href={item.href} class:list={['nav-link', { active: isActive(item.href) }]}>
+          {item.label}
+        </a>
+      ))}
+      <ThemeToggle />
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: saturate(140%) blur(10px);
+    background: color-mix(in oklab, var(--paper) 82%, transparent);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 68px;
+  }
+  .brand { display: inline-flex; align-items: baseline; gap: .55rem; }
+  .mark { color: var(--accent); font-size: .9rem; transform: translateY(-1px); }
+  .name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: -.02em;
+  }
+  .nav { display: flex; align-items: center; gap: clamp(.8rem, 2.5vw, 1.6rem); }
+  .nav-link {
+    font-family: var(--font-mono);
+    font-size: .82rem;
+    letter-spacing: .02em;
+    color: var(--ink-soft);
+    padding-block: .3rem;
+    position: relative;
+    transition: color .2s var(--ease);
+  }
+  .nav-link:hover { color: var(--ink); }
+  .nav-link.active { color: var(--accent); }
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -2px;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+</style>
