@@ -257,6 +257,31 @@ a.tag:hover { border-color: var(--accent); color: var(--accent); }
 .prose figure { margin: 1.5em 0; }
 .prose figcaption { font-size: .82rem; color: var(--ink-faint); margin-top: .5em; text-align: center; }
 
+/* 접기(details/summary): 긴 코드·표를 접어두는 용도 */
+.prose details {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 1em;
+  margin: 1.35em 0;
+  background: var(--paper-card);
+}
+.prose details[open] { padding-bottom: .4em; }
+.prose summary {
+  cursor: pointer;
+  padding: .7em 0;
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  letter-spacing: .01em;
+  color: var(--ink-soft);
+  list-style: none;
+  transition: color .2s var(--ease);
+}
+.prose summary:hover { color: var(--accent); }
+.prose summary::-webkit-details-marker { display: none; }
+.prose summary::before { content: "▸ "; color: var(--accent); }
+.prose details[open] > summary::before { content: "▾ "; }
+.prose details > pre:last-child { margin-bottom: 0; }
+
 /* 등장 애니메이션 (페이지 로드 시 stagger) */
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
