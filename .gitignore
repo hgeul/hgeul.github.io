@@ -19,3 +19,10 @@ pnpm-debug.log*
 .DS_Store
 .vscode/
 *.log
+
+# 하네스: 로컬 전용 (공개 저장소에 올리지 않는다)
+.claude/settings.local.json
+.claude/sensitive-terms.local
+
+# 크래시 덤프 등 잡파일
+*.stackdump
