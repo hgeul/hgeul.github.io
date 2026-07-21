@@ -1,0 +1,98 @@
+---
+title: (템플릿) 제목을 여기에
+description: 목록 카드·SEO·RSS 에 쓰이는 한두 문장 요약. 앰대시 대신 콜론·쉼표·마침표.
+pubDate: 2026-01-01
+tags: ['태그1', '태그2']
+draft: true
+---
+
+{/*
+  이 파일은 HTML 을 직접 써서 리치한 글을 쓰기 위한 템플릿이다.
+  - 파일명 앞의 `_` 때문에 빌드/목록에서 제외된다. 새 글은 이 파일을 복사해
+    `src/content/blog/<슬러그>.mdx` 로 저장하고 draft 를 false 로 바꾼다.
+  - MDX 규칙: 본문 텍스트는 마크다운, 코드는 ``` 펜스, 리치 UI 는 아래 클래스로 HTML.
+  - 스타일 클래스는 src/styles/global.css 의 "리치 콘텐츠 컴포넌트" 절에 정의돼 있고
+    전부 다크모드 대응된다. 여기서 CSS 를 다시 쓸 필요 없다.
+  - 주의: MDX 에서는 이 형식 {/* ... *​/} 이 주석이다(HTML <!-- --> 아님).
+    본문 텍스트에 리터럴 `<` 나 `{` 를 쓰면 태그/식으로 해석되니 코드는 펜스로.
+  - 중요: 텍스트를 담는 박스는 `<p>` 가 아니라 반드시 `<div>` 로 쓴다.
+    MDX 가 박스 안 텍스트를 다시 <p> 로 감싸는데, <p> 안의 <p> 는 무효라
+    브라우저가 바깥 박스를 즉시 닫아 "빈 박스 + 밖으로 새는 텍스트" 가 된다.
+    (chip/pill/badge 처럼 한 줄짜리 인라인은 <span> 그대로 OK.)
+*/}
+
+도입 문단은 그냥 **마크다운**으로 쓴다. 요점을 먼저 던지는 게 좋다(OREO).
+
+## 1. 일반 텍스트와 코드
+
+문단, **볼드**, `인라인 코드`, [링크](https://example.com) 모두 마크다운 그대로.
+
+코드는 ``` 펜스로 쓴다. 이러면 중괄호 `{}` 도 안전하다:
+
+```python
+def search(q: str) -> list[dict]:
+    return client.query({"vector": embed(q), "top_k": 5})
+```
+
+## 2. 키워드 칩 / 인라인 라벨
+
+<div class="chip-row">
+  <span class="chip">ANN</span>
+  <span class="chip">HNSW</span>
+  <span class="chip">IVF-PQ</span>
+</div>
+
+문장 안에 라벨도 넣을 수 있다: <span class="pill">강조</span> <span class="pill-outline">보조</span> <span class="badge">배지</span>
+
+## 3. 노트 / 콜아웃
+
+<div class="note">
+  옆길 설명이나 주의사항은 이 노트 박스에. 좌측 액센트 선 + 은은한 배경.
+</div>
+
+## 4. 2단 레이아웃 (좁은 화면에선 자동 1단)
+
+<div class="two-col">
+  <div>
+    <h4>왼쪽</h4>
+    <p>설명 텍스트. 표·리스트·코드 어떤 것도 넣을 수 있다.</p>
+  </div>
+  <div>
+    <h4>오른쪽</h4>
+    <p>비교 대상이나 보조 그림을 나란히 둘 때 쓴다.</p>
+  </div>
+</div>
+
+## 5. 다이어그램 (인라인 SVG)
+
+SVG 는 `.svg-box` 로 감싸면 프레임 + 가로 스크롤이 붙는다.
+색은 `currentColor` 를 쓰면 다크모드에서 자동으로 대비가 맞는다.
+
+<figure>
+  <div class="svg-box">
+    <svg width="220" height="90" viewBox="0 0 220 90" fill="none" stroke="currentColor">
+      <circle cx="40" cy="45" r="6" fill="currentColor" stroke="none" />
+      <circle cx="180" cy="45" r="6" fill="currentColor" stroke="none" />
+      <line x1="46" y1="45" x2="174" y2="45" stroke-dasharray="4 3" />
+      <text x="86" y="38" font-size="11" fill="currentColor" stroke="none">거리</text>
+    </svg>
+  </div>
+  <figcaption>그림 1. currentColor 를 쓰면 라이트/다크 모두에서 보인다.</figcaption>
+</figure>
+
+## 6. 강조 패널 / 표
+
+<div class="card">
+  중요한 결론이나 요약은 카드로 감싸 눈에 띄게.
+</div>
+
+표는 마크다운 표가 제일 편하다(사이트 테마로 렌더됨):
+
+| 방식 | 기준 | 언제 |
+|---|---|---|
+| 코사인 유사도 | 각도 | 방향(의미)이 중요할 때 |
+| 유클리드 거리 | 직선거리 | 절대 값 차이가 중요할 때 |
+
+## 마무리
+
+이 아래로 결론. 발행 전 `/dod` 로 앰대시·빌드·프론트매터 검수하고, `draft` 를 false 로.

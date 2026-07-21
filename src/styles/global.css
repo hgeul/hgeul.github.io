@@ -196,6 +196,67 @@ a.tag:hover { border-color: var(--accent); color: var(--accent); }
 .prose th, .prose td { border: 1px solid var(--line); padding: .55em .8em; text-align: left; }
 .prose th { background: var(--paper-sunk); font-weight: 600; }
 
+/* ---- 리치 콘텐츠 컴포넌트 (HTML 직접 작성용) ----
+   .md/.mdx 본문에 아래 클래스로 HTML 을 써서 블로그 테마를 그대로 입힌다.
+   전부 디자인 토큰 기반이라 다크모드 자동 대응. 작성 규격은 _post-template.md 참고. */
+
+/* 키워드 칩 나열 */
+.prose .chip-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5em; }
+.prose .chip {
+  font-family: var(--font-mono); font-size: .72rem; letter-spacing: .02em;
+  color: var(--ink-soft); background: var(--paper-sunk);
+  border: 1px solid var(--line-soft); border-radius: 999px; padding: .2em .7em;
+}
+
+/* 인라인 라벨(강조 pill / 아웃라인 / 배지) */
+.prose .pill, .prose .pill-outline, .prose .badge {
+  display: inline-block; font-family: var(--font-mono); font-size: .7rem; letter-spacing: .02em;
+  border-radius: 999px; padding: .16em .62em; margin-right: .35em; vertical-align: middle;
+}
+.prose .pill {
+  background: color-mix(in oklab, var(--accent) 15%, var(--paper));
+  color: var(--accent-deep);
+  border: 1px solid color-mix(in oklab, var(--accent) 32%, transparent);
+}
+:root[data-theme='dark'] .prose .pill { color: var(--accent); }
+.prose .pill-outline { border: 1px solid var(--line); color: var(--ink-soft); }
+.prose .badge { background: var(--paper-sunk); border: 1px solid var(--line-soft); color: var(--ink-soft); }
+
+/* 사이드 노트 / 콜아웃 */
+.prose .note {
+  font-size: .92rem; color: var(--ink-soft);
+  background: var(--paper-card); border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm); padding: .7em 1em; margin-top: .8em;
+}
+
+/* 강조 패널 */
+.prose .card {
+  background: var(--paper-card); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.1em 1.3em; box-shadow: var(--shadow);
+}
+
+/* 반응형 2단 (좁으면 자동으로 1단) */
+.prose .two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 1.4rem; align-items: start;
+}
+
+/* 다이어그램 프레임 (인라인 SVG 등) */
+.prose .svg-box {
+  background: var(--paper-sunk); border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); padding: .8em; overflow-x: auto; margin-top: .6em;
+}
+.prose .svg-box { text-align: center; }
+/* 고정 픽셀 SVG 를 칸 너비에 맞춰 확대 + 가운데 정렬 (좌측 쏠림 방지) */
+.prose .svg-box svg, .prose figure svg {
+  width: 100%; max-width: 560px; height: auto;
+  display: block; margin-inline: auto;
+}
+.prose figure { margin: 1.5em 0; }
+.prose figcaption { font-size: .82rem; color: var(--ink-faint); margin-top: .5em; text-align: center; }
+
 /* 등장 애니메이션 (페이지 로드 시 stagger) */
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
