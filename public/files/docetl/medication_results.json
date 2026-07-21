@@ -1,0 +1,62 @@
+[
+  {
+    "side_effects": "건조한 기침, 가벼운 어지러움",
+    "uses": "고혈압 조절",
+    "medication": "Lisinopril",
+    "_counts_prereduce_summarize_medications": 2
+  },
+  {
+    "side_effects": "복부 불편감",
+    "uses": "제2형 당뇨병 관리",
+    "medication": "Metformin",
+    "_counts_prereduce_summarize_medications": 1
+  },
+  {
+    "side_effects": "부작용에 대한 언급이 없습니다.",
+    "uses": "주로 두통 완화에 사용됩니다.",
+    "medication": "Acetaminophen",
+    "_counts_prereduce_summarize_medications": 2
+  },
+  {
+    "side_effects": "근육통",
+    "uses": "콜레스테롤",
+    "medication": "atorvastatin",
+    "_counts_prereduce_summarize_medications": 2
+  },
+  {
+    "side_effects": "식사 거르기 시 위장 불편",
+    "uses": "통증 완화, 염좌 치료",
+    "medication": "ibuprofen",
+    "_counts_prereduce_summarize_medications": 2
+  },
+  {
+    "side_effects": "특정 부작용이 언급되지 않았습니다.",
+    "uses": "이 약물은 위식도 역류 질환(GERD)과 같은 위장관 역류 증상을 완화하는 데 사용됩니다.",
+    "medication": "omeprazole",
+    "_counts_prereduce_summarize_medications": 1
+  },
+  {
+    "side_effects": "부작용에 대한 언급은 없습니다.",
+    "uses": "Prilosec OTC는 위산 역류 증상 치료에 사용됩니다.",
+    "medication": "Prilosec OTC",
+    "_counts_prereduce_summarize_medications": 1
+  },
+  {
+    "side_effects": "떨림",
+    "uses": "천식 및 호흡기 문제",
+    "medication": "albuterol",
+    "_counts_prereduce_summarize_medications": 1
+  },
+  {
+    "side_effects": "가벼운 발진",
+    "uses": "부비동염(축농증)",
+    "medication": "amoxicillin",
+    "_counts_prereduce_summarize_medications": 1
+  },
+  {
+    "side_effects": "부작용에 대한 세부 정보는 제공되지 않았습니다.",
+    "uses": "이 약물은 주로 알레르기 치료에 사용되며, 잠을 자는 데에도 사용될 수 있습니다.",
+    "medication": "diphenhydramine",
+    "_counts_prereduce_summarize_medications": 2
+  }
+]

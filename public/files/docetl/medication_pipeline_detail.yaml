@@ -1,0 +1,80 @@
+﻿datasets:
+  transcripts:
+    path: medical_transcripts.json
+    type: file
+
+default_model: gpt-4o-mini
+
+system_prompt:
+  dataset_description: 의료 진료 기록 모음
+  persona: 약물을 분석하는 의료 전문가
+
+operations:
+  - name: extract_medications
+    type: map
+    sample: 10
+    output:
+      schema:
+        medication: list[str]
+    prompt: |
+      이 진료 기록에서 언급된 모든 약물을 추출하세요:
+      {{ input.src }}
+      약물 이름만 반환하세요. 없으면 빈 리스트를 반환하세요.
+
+  - name: unnest_medications
+    type: unnest
+    unnest_key: medication
+
+  - name: resolve_medications
+    type: resolve
+    blocking_keys:
+      - medication
+    blocking_threshold: 0.5
+    comparison_prompt: |
+      이 두 약물이 동일한 약물인가요? (브랜드명과 일반명도 같은 약물로 간주)
+      약물 1: {{ input1.medication }}
+      약물 2: {{ input2.medication }}      
+      예시: 타이레놀 = 아세트아미노펜, 프릴로섹 = 오메프라졸, 립토르 = 아토르바스타틴
+
+    embedding_model: text-embedding-3-small
+    output:
+      schema:
+        medication: str
+    resolution_prompt: |
+      이 약물명 변형들을 표준 명칭으로 통일하세요:
+      {% for entry in inputs %}
+      - {{ entry.medication }}
+      {% endfor %}
+      가장 일반적인 표준 약물명을 반환하세요.
+
+  - name: summarize_medications
+    type: reduce
+    reduce_key:
+      - medication
+    output:
+      schema:
+        side_effects: str
+        uses: str
+    prompt: |
+      {{ reduce_key }}에 대한 진료 기록들:
+      {% for value in inputs %}
+      {{ value.src }}
+      {% endfor %}
+
+      다음 정보를 한글로 제공하세요:
+      1. 부작용: 어떤 부작용이 언급되었나요?
+      2. 용도: 이 약물이 어떤 질환에 사용되나요?
+
+pipeline:
+  steps:
+    - name: medical_analysis
+      input: transcripts
+      operations:
+        - extract_medications
+        - unnest_medications
+        - resolve_medications
+        - summarize_medications
+  output:
+    type: file
+    path: medication_results.json
+    intermediate_dir: intermediate_results

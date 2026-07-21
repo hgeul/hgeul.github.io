@@ -1,0 +1,32 @@
+[
+  {
+    "src": "Doctor: Hello, Mrs. Johnson. How are you doing on Lisinopril? Patient: Good overall, but I occasionally feel light‑headed after taking it."
+  },
+  {
+    "src": "Doctor: Mr. Smith, how's the Metformin working? Patient: My blood sugar is better, but I feel some stomach upset since starting metformin."
+  },
+  {
+    "src": "Doctor: Any issues with your Lisinopril, Mr. Brown? Patient: My blood pressure is controlled, but I have a dry cough that started after lisinopril."
+  },
+  {
+    "src": "Doctor: You mentioned headaches. Are you taking anything? Patient: I take Tylenol when it gets bad. Doctor: Okay, acetaminophen is fine, avoid more than 3 grams a day."
+  },
+  {
+    "src": "Doctor: For cholesterol, are you still on atorvastatin? Patient: Yes, Lipitor 20 mg at night. I had mild muscle aches at first, but they improved."
+  },
+  {
+    "src": "Doctor: What are you using for pain after the sprain? Patient: Mostly ibuprofen, sometimes Motrin 400 mg, though it upsets my stomach if I skip meals."
+  },
+  {
+    "src": "Doctor: Reflux symptoms better? Patient: Yes, with omeprazole. Doctor: If it returns, we could try Prilosec OTC for two weeks and reassess."
+  },
+  {
+    "src": "Doctor: Any breathing problems? Patient: I use my albuterol inhaler before exercise; it helps, but I get a bit shaky afterward."
+  },
+  {
+    "src": "Doctor: Did the sinus infection clear after the antibiotics? Patient: The amoxicillin worked, but I developed a mild rash on day three which went away."
+  },
+  {
+    "src": "Doctor: For sleep, avoid mixing diphenhydramine with your other meds. Patient: Understood, I only use it rarely for allergies under the Benadryl brand."
+  }
+]
