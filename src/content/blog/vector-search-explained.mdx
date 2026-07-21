@@ -1,0 +1,647 @@
+---
+title: 벡터 검색 핵심 개념 설명서 (ANN · HNSW · IVF-PQ · 코사인 유사도)
+description: Milvus·Qdrant 같은 벡터 DB가 "비슷한 벡터를 빠르게 찾는" 원리를 그림과 함께 직관적으로 정리한다. ANN, HNSW, IVF-PQ, 코사인 유사도, 그리고 RAG·mem0에서의 벡터 활용까지.
+pubDate: 2025-11-25
+tags: ['벡터검색', 'RAG', 'HNSW', 'IVF-PQ', '임베딩']
+draft: false
+---
+
+ANN, HNSW, IVF-PQ, 코사인 유사도, 유클리드 거리, 그리고 RAG·mem0에서의 벡터 활용까지 한 번에 정리한다.
+
+<h2>1. 전체 그림 먼저 보기</h2>
+<p>
+Milvus, Qdrant 같은 벡터 데이터베이스는 결국 한 가지 일을 합니다:
+<strong>“비슷한 벡터를 빠르게 찾아오기”</strong>.
+</p>
+<p>
+여기서 자주 등장하는 어려운 용어들을 한 줄로 먼저 정리해보면:
+</p>
+<div class="chip-row">
+<span class="chip">ANN</span>
+<span class="chip">HNSW</span>
+<span class="chip">IVF-PQ</span>
+<span class="chip">코사인 유사도</span>
+<span class="chip">유클리드 거리</span>
+<span class="chip">RAG</span>
+<span class="chip">벡터 검색</span>
+<span class="chip">mem0</span>
+<span class="chip">Milvus</span>
+</div>
+<table>
+<thead>
+<tr>
+<th>용어</th>
+<th>한 줄 요약</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ANN</td>
+<td>정확히 1등을 찾는 대신, <strong>“거의 1등 같은 이웃”</strong>을 빨리 찾는 방법(근사 최근접 탐색)</td>
+</tr>
+<tr>
+<td>코사인 유사도</td>
+<td>두 벡터가 <strong>“방향이 얼마나 비슷한지”</strong>를 보는 척도 (각도 기반)</td>
+</tr>
+<tr>
+<td>유클리드 거리</td>
+<td>우리가 아는 <strong>직선 거리</strong> (점과 점 사이의 진짜 거리)</td>
+</tr>
+<tr>
+<td>HNSW</td>
+<td>점들을 연결해 <strong>계층적인 그래프를 만든 뒤, 그래프 위를 걸어가면서 가까운 이웃을 찾는 기법</strong></td>
+</tr>
+<tr>
+<td>IVF-PQ</td>
+<td>먼저 <strong>대략적인 구역으로 나누고(IVF)</strong>, 그 안에서 <strong>벡터를 압축해서(PQ)</strong> 더 빨리/적게 저장하는 방식</td>
+</tr>
+<tr>
+<td>RAG</td>
+<td>LLM이 답변을 하기 전에, <strong>벡터 검색으로 관련 자료를 찾아서</strong> 함께 사용하게 하는 방식</td>
+</tr>
+<tr>
+<td>mem0 + Milvus</td>
+<td><strong>mem0가 만든 “기억 벡터”</strong>를 Milvus에 저장·검색해서, <strong>장기 메모리</strong>처럼 쓰는 구조</td>
+</tr>
+</tbody>
+</table>
+<div class="note">
+이 문서는 “수학적으로 완벽한 설명”보다는, <strong>직관과 개념 이해</strong>에 더 초점을 둡니다.
+</div>
+
+<h2>2. 벡터와 거리: 기본 개념</h2>
+<div class="two-col">
+<div>
+<h3>2.1 벡터란?</h3>
+<p>
+벡터는 그냥 숫자들의 배열입니다. 예를 들어:
+</p>
+
+```
+[0.2, -0.5, 0.8]   # 3차원 벡터
+[0.01, 1.2, -0.7, 0.3, ...]   # 768차원, 1536차원 같은 고차원 벡터
+```
+
+<p>
+LLM 임베딩도 결국 이런 벡터입니다.  
+“문장의 의미, 톤, 주제” 같은 정보를 여러 숫자로 쪼개어 표현한 것이라고 보면 됩니다.
+</p>
+
+<h3>2.2 거리란?</h3>
+<p>
+벡터끼리의 <strong>비슷함/다름</strong>을 판단하려면,  
+“두 점이 얼마나 떨어져 있는가?”를 알아야 합니다.  
+이걸 <strong>거리(distance)</strong>라고 부릅니다.
+</p>
+</div>
+<div>
+<h3>2.3 2D 예시로 보는 그림</h3>
+<div class="svg-box">
+<svg width="260" height="200" viewBox="0 0 260 200">
+
+<line x1="30" y1="170" x2="230" y2="170" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+<line x1="30" y1="170" x2="30" y2="30" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+<text x="235" y="174" font-size="10" fill="currentColor" fill-opacity="0.7">x</text>
+<text x="24" y="26" font-size="10" fill="currentColor" fill-opacity="0.7">y</text>
+
+<circle cx="90" cy="130" r="4" fill="#3b82f6" />
+<text x="95" y="126" font-size="10" fill="#1d4ed8">A</text>
+
+<circle cx="190" cy="80" r="4" fill="#f97316" />
+<text x="195" y="76" font-size="10" fill="#c2410c">B</text>
+
+<line x1="90" y1="130" x2="190" y2="80" stroke="#10b981" stroke-width="1.5" stroke-dasharray="4 3" />
+<text x="130" y="100" font-size="10" fill="#059669">직선 거리</text>
+</svg>
+</div>
+<div class="note">
+위 그림에서 A, B는 각각 하나의 벡터입니다.  
+A와 B를 잇는 직선이 바로 “유클리드 거리”의 직관적인 모습입니다.
+</div>
+</div>
+</div>
+
+<h2>3. 유클리드 거리와 코사인 유사도</h2>
+
+<h3>3.1 유클리드 거리 (Euclidean Distance)</h3>
+<span class="pill">거리 기반</span>
+<p>
+우리가 학교에서 배운 “피타고라스 정리” 그대로입니다.  
+두 점 사이의 실제 직선 거리를 잽니다.
+</p>
+
+```
+예) 2차원 벡터 (x1, y1), (x2, y2)
+
+유클리드 거리 ≈ sqrt( (x1 - x2)² + (y1 - y2)² )
+```
+
+<ul>
+<li>값이 <strong>작을수록</strong> 두 벡터가 가깝다.</li>
+<li>크기(길이)와 방향이 모두 영향을 미친다.</li>
+</ul>
+
+<h3>3.2 코사인 유사도 (Cosine Similarity)</h3>
+<span class="pill">각도 기반</span>
+<p>
+코사인 유사도는 “두 벡터가 <strong>어느 방향을 보고 있는지</strong>”에 집중합니다.
+길이는 크게 신경 쓰지 않고, 두 벡터 사이의 <strong>각도</strong>만 봅니다.
+</p>
+
+```
+코사인 유사도 = -1 ~ 1 사이의 값
+1에 가까울수록 → 방향이 거의 같다 (아주 비슷)
+0에 가까울수록 → 서로 직각 (관련성 낮음)
+-1에 가까울수록 → 완전히 반대 방향
+```
+
+<div class="two-col">
+<div>
+<h4>언제 코사인 유사도를 쓰나?</h4>
+<ul>
+<li>문장 임베딩, 문서 임베딩처럼 <strong>길이보다는 방향</strong>이 중요할 때</li>
+<li>값의 스케일 차이가 커도, “의미적 방향”을 기준으로 비교하고 싶을 때</li>
+</ul>
+</div>
+<div>
+<h4>언제 유클리드 거리를 쓰나?</h4>
+<ul>
+<li>벡터의 <strong>절대적인 값 차이</strong>가 중요한 경우</li>
+<li>이미 잘 정규화된 공간에서, 물리적인 거리감에 가까운 비교를 원할 때</li>
+</ul>
+</div>
+</div>
+
+<div class="svg-box">
+<svg width="260" height="200" viewBox="0 0 260 200">
+
+<circle cx="40" cy="160" r="3" fill="currentColor" fill-opacity="0.7" />
+<text x="32" y="172" font-size="10" fill="currentColor" fill-opacity="0.7">O</text>
+
+<line x1="40" y1="160" x2="140" y2="120" stroke="#3b82f6" stroke-width="2" />
+<circle cx="140" cy="120" r="3" fill="#3b82f6" />
+<text x="145" y="116" font-size="10" fill="#1d4ed8">A</text>
+
+<line x1="40" y1="160" x2="120" y2="60" stroke="#f97316" stroke-width="2" />
+<circle cx="120" cy="60" r="3" fill="#f97316" />
+<text x="125" y="56" font-size="10" fill="#c2410c">B</text>
+
+<path d="M55 155 A15 15 0 0 1 62 143" fill="none" stroke="#10b981" stroke-width="1" />
+<text x="65" y="145" font-size="10" fill="#059669">θ</text>
+</svg>
+</div>
+<div class="note">
+코사인 유사도는 위 그림의 각도 θ에만 관심이 있습니다.  
+A와 B의 길이가 조금 달라도, 방향이 비슷하면 “유사하다”고 봅니다.
+</div>
+
+<h2>4. ANN (Approximate Nearest Neighbor)</h2>
+<span class="pill">근사 최근접 탐색</span>
+<p>
+<strong>Nearest Neighbor</strong>는 말 그대로 “가장 가까운 이웃”입니다.  
+하지만 데이터가 수백만·수억 개가 되면, 모든 점을 하나씩 비교하는 것은 너무 느립니다.
+</p>
+<p>
+그래서 등장하는 개념이 바로 <strong>ANN(Approximate Nearest Neighbor)</strong> 입니다.
+</p>
+<ul>
+<li><strong>정확한 1등</strong> 대신, 거의 1등과 비슷한 후보를 찾는다.</li>
+<li>대신 속도는 <strong>훨씬 빠르고</strong>, 메모리도 <strong>훨씬 적게</strong> 쓴다.</li>
+<li>Milvus, Qdrant, Pinecone 등 대부분의 벡터 DB는 ANN을 기본으로 사용한다.</li>
+</ul>
+<div class="note">
+RAG 시스템에서 “최신 답변 5개 정도”만 잘 찾으면 되는 상황에서는  
+<strong>ANN으로 충분</strong>하고, 오히려 필수에 가깝습니다.
+</div>
+
+<h2>5. HNSW: 그래프를 타고 가는 검색</h2>
+<span class="pill">HNSW</span>
+<span class="pill-outline">Hierarchical Navigable Small World</span>
+
+<p>
+HNSW는 “그래프를 타고 내려가면서 가까운 점을 찾는 방식”입니다.
+</p>
+
+<h3>5.1 핵심 아이디어</h3>
+<ul>
+<li>데이터 포인트들을 <strong>그래프 형태</strong>로 연결한다.</li>
+<li>위로 갈수록 <strong>대충 보기 위한 층(상위 레벨)</strong>, 아래로 갈수록 <strong>자세히 보기 위한 층(하위 레벨)</strong>이 있다.</li>
+<li>검색할 때는 <strong>위층에서 시작해서</strong>, 점점 <strong>아래층으로 내려오면서</strong> 가까운 이웃을 좁혀간다.</li>
+</ul>
+
+<div class="svg-box">
+<svg width="280" height="200" viewBox="0 0 280 200">
+
+<text x="10" y="50" font-size="10" fill="currentColor" fill-opacity="0.7">상위 레벨 (거친 탐색)</text>
+<text x="10" y="110" font-size="10" fill="currentColor" fill-opacity="0.7">중간 레벨</text>
+<text x="10" y="170" font-size="10" fill="currentColor" fill-opacity="0.7">하위 레벨 (정밀 탐색)</text>
+
+<circle cx="180" cy="40" r="4" fill="#3b82f6" />
+<circle cx="230" cy="40" r="4" fill="#3b82f6" />
+<line x1="180" y1="40" x2="230" y2="40" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+
+<circle cx="150" cy="100" r="4" fill="#3b82f6" />
+<circle cx="200" cy="100" r="4" fill="#3b82f6" />
+<circle cx="240" cy="100" r="4" fill="#3b82f6" />
+<line x1="150" y1="100" x2="200" y2="100" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+<line x1="200" y1="100" x2="240" y2="100" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+
+<circle cx="140" cy="160" r="4" fill="#3b82f6" />
+<circle cx="170" cy="160" r="4" fill="#3b82f6" />
+<circle cx="205" cy="160" r="4" fill="#3b82f6" />
+<circle cx="235" cy="160" r="4" fill="#3b82f6" />
+<line x1="140" y1="160" x2="170" y2="160" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+<line x1="170" y1="160" x2="205" y2="160" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+<line x1="205" y1="160" x2="235" y2="160" stroke="currentColor" stroke-opacity="0.4" stroke-width="1" />
+
+<line x1="180" y1="40" x2="150" y2="100" stroke="currentColor" stroke-opacity="0.28" stroke-width="1" />
+<line x1="230" y1="40" x2="200" y2="100" stroke="currentColor" stroke-opacity="0.28" stroke-width="1" />
+<line x1="200" y1="100" x2="205" y2="160" stroke="currentColor" stroke-opacity="0.28" stroke-width="1" />
+
+<circle cx="100" cy="160" r="4" fill="#f97316" />
+<text x="85" y="158" font-size="10" fill="#c2410c">Query</text>
+</svg>
+</div>
+
+<div class="note">
+실제 구현은 훨씬 복잡하지만, 개념적으로는  
+“위에서 대충 위치를 잡고, 아래로 내려오면서 점점 더 정밀하게 찾는다”라고 이해하면 됩니다.
+</div>
+
+<h3>5.2 특징</h3>
+<ul>
+<li>읽기(검색) 속도가 아주 빠르고, 정확도도 높은 편</li>
+<li>그래프 구조를 유지해야 해서, 삽입/삭제가 다소 비용이 들 수 있음</li>
+<li>Qdrant, Milvus 둘 다 HNSW를 많이 사용</li>
+</ul>
+
+<h2>6. IVF-PQ: 클러스터링 + 압축</h2>
+<span class="pill">IVF</span>
+<span class="pill">PQ</span>
+<span class="badge">주로 Milvus에서 자주 언급</span>
+
+<h3>6.1 IVF (Inverted File Index)</h3>
+<p>
+IVF는 벡터들을 먼저 <strong>여러 그룹(클러스터)</strong>으로 나누고,  
+검색할 때는 “가까워 보이는 그룹들만 뒤지는 방식”입니다.
+</p>
+
+<div class="svg-box">
+<svg width="280" height="200" viewBox="0 0 280 200">
+
+<text x="40" y="25" font-size="10" fill="currentColor" fill-opacity="0.7">Cluster 1</text>
+<text x="180" y="25" font-size="10" fill="currentColor" fill-opacity="0.7">Cluster 2</text>
+<text x="40" y="115" font-size="10" fill="currentColor" fill-opacity="0.7">Cluster 3</text>
+<text x="180" y="115" font-size="10" fill="currentColor" fill-opacity="0.7">Cluster 4</text>
+
+<rect x="20" y="30" width="90" height="70" fill="none" stroke="currentColor" stroke-opacity="0.28" stroke-dasharray="3 3" />
+<rect x="160" y="30" width="90" height="70" fill="none" stroke="currentColor" stroke-opacity="0.28" stroke-dasharray="3 3" />
+<rect x="20" y="120" width="90" height="70" fill="none" stroke="currentColor" stroke-opacity="0.28" stroke-dasharray="3 3" />
+<rect x="160" y="120" width="90" height="70" fill="none" stroke="currentColor" stroke-opacity="0.28" stroke-dasharray="3 3" />
+
+<circle cx="50" cy="60" r="3" fill="#3b82f6" />
+<circle cx="70" cy="80" r="3" fill="#3b82f6" />
+<circle cx="40" cy="90" r="3" fill="#3b82f6" />
+
+<circle cx="190" cy="60" r="3" fill="#3b82f6" />
+<circle cx="220" cy="75" r="3" fill="#3b82f6" />
+<circle cx="205" cy="85" r="3" fill="#3b82f6" />
+
+<circle cx="50" cy="140" r="3" fill="#3b82f6" />
+<circle cx="80" cy="160" r="3" fill="#3b82f6" />
+
+<circle cx="190" cy="140" r="3" fill="#3b82f6" />
+<circle cx="210" cy="160" r="3" fill="#3b82f6" />
+
+<circle cx="140" cy="100" r="4" fill="#f97316" />
+<text x="130" y="94" font-size="10" fill="#c2410c">Q</text>
+</svg>
+</div>
+
+<div class="note">
+전 공간을 전부 스캔하는 대신,  
+“Q와 가까워 보이는 몇 개의 클러스터만 들어가서 검색”하는 구조입니다.
+</div>
+
+<h3>6.2 PQ (Product Quantization)</h3>
+<p>
+PQ는 벡터를 <strong>압축해서 저장</strong>하는 기술입니다.
+</p>
+<ul>
+<li>원래 벡터는 float 숫자들이라서 메모리를 많이 차지한다.</li>
+<li>PQ는 벡터를 여러 조각으로 나눈 뒤, <strong>각 조각을 코드북(codebook) 인덱스로 치환</strong>한다.</li>
+<li>이렇게 하면 “정확한 값”은 조금 잃지만, <strong>메모리는 크게 줄고 검색 속도는 올라간다.</strong></li>
+</ul>
+
+<h3>6.3 IVF-PQ를 한 문장으로</h3>
+<p>
+<strong>IVF</strong>로 “어느 동네를 볼지”를 먼저 정하고,<br/>
+<strong>PQ</strong>로 “그 동네 안의 벡터들을 압축해서 빠르게 찾는” 방식입니다.
+</p>
+
+<h2>7. 언제 무엇을 떠올리면 좋을까?</h2>
+<table>
+<thead>
+<tr>
+<th>개념</th>
+<th>역할</th>
+<th>쉽게 이해하는 비유</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>유클리드 거리</td>
+<td>두 점의 실제 직선 거리</td>
+<td>지도에서 A~B 사이를 자로 잰 느낌</td>
+</tr>
+<tr>
+<td>코사인 유사도</td>
+<td>두 벡터의 방향이 얼마나 같은지</td>
+<td>두 사람이 <strong>같은 곳을 바라보는지</strong> 확인</td>
+</tr>
+<tr>
+<td>ANN</td>
+<td>“거의” 가장 가까운 이웃을 빠르게 찾기</td>
+<td>완벽한 검색 대신, <strong>충분히 좋은 추천</strong>을 빠르게 주는 시스템</td>
+</tr>
+<tr>
+<td>HNSW</td>
+<td>그래프 구조를 따라 내려가며 근접 이웃 탐색</td>
+<td>전망대에서 대충 방향 잡고, 근처 골목으로 내려가서 자세히 찾는 느낌</td>
+</tr>
+<tr>
+<td>IVF-PQ</td>
+<td>클러스터링 + 압축 기반 검색</td>
+<td>도시를 여러 구역으로 나누고(IVF), 각 집 주소를 짧게 코딩해두고(PQ) 찾는 느낌</td>
+</tr>
+<tr>
+<td>RAG에서 벡터</td>
+<td>질문과 문서를 같은 공간에 두고 “가까운 문서”를 찾아주는 역할</td>
+<td>질문과 가장 잘 맞는 자료를, 미리 정리해둔 책꽂이에서 골라오는 사서</td>
+</tr>
+<tr>
+<td>mem0 + Milvus</td>
+<td>대화 기록과 사용자 정보를 “기억 벡터”로 저장·검색</td>
+<td>사용자 히스토리를 대신 기억해 주는 <strong>똑똑한 비서 + 검색 엔진</strong> 조합</td>
+</tr>
+</tbody>
+</table>
+<div class="note">
+Milvus, Qdrant에서 인덱스 타입을 선택할 때  
+<strong>“HNSW vs IVF-PQ”</strong> 정도만 구분해도 실무에서는 크게 도움이 됩니다.
+</div>
+
+<h2>8. Milvus / Qdrant 설정을 볼 때 읽는 법</h2>
+<p>
+실제 벡터 DB 설정에서 이런 옵션들을 볼 수 있습니다:
+</p>
+
+```
+# 예시 (개념용 의사 코드)
+
+index_type: "HNSW"
+metric_type: "COSINE"
+
+# 또는
+
+index_type: "IVF_PQ"
+metric_type: "L2"  # L2 = 유클리드 거리
+```
+
+<ul>
+<li>`metric_type: "COSINE"` → <strong>코사인 유사도</strong>로 벡터 비교</li>
+<li>`metric_type: "L2"` → <strong>유클리드 거리</strong>로 벡터 비교</li>
+<li>`index_type: "HNSW"` → 그래프 기반 ANN</li>
+<li>`index_type: "IVF_PQ"` → 클러스터링 + 압축 기반 ANN</li>
+</ul>
+<div class="note">
+LLM 임베딩 기반 RAG에서는  
+<strong>코사인 유사도 + HNSW</strong> 조합이 많이 쓰이고,  
+아주 큰 규모/저비용 저장이 필요할 때 <strong>IVF-PQ</strong>를 고려합니다.
+</div>
+
+<h2>9. RAG에서 벡터가 하는 일</h2>
+<span class="pill">RAG 파이프라인</span>
+<span class="pill-outline">Retrieval Augmented Generation</span>
+
+<h3>9.1 RAG를 한 줄로 요약하면</h3>
+<p>
+RAG는 이렇게 동작합니다:
+</p>
+<ol>
+<li>문서들을 잘게 쪼개서(<strong>chunk</strong>) 저장해 두고,</li>
+<li>각 chunk를 임베딩 모델로 <strong>벡터로 변환</strong>하여 벡터 DB에 넣어 두고,</li>
+<li>사용자가 질문하면, 질문도 <strong>같은 모델</strong>로 벡터로 만든 뒤,</li>
+<li>벡터 DB에서 <strong>“가장 비슷한 chunk 벡터”</strong>들을 찾아오고,</li>
+<li>그 chunk 텍스트를 LLM에게 함께 넘겨서 <strong>답변을 생성</strong>하게 합니다.</li>
+</ol>
+<div class="note">
+핵심은 “질문”과 “문서 조각”을 <strong>같은 벡터 공간에 올려두고</strong>,  
+그 안에서 <strong>가까운 것끼리 매칭</strong>한다는 점입니다.
+</div>
+<h3>9.2 RAG 파이프라인 그림</h3>
+<div class="svg-box">
+<svg viewBox="0 0 560 210" role="img" aria-label="RAG 파이프라인 구조도">
+<rect x="16" y="44" width="120" height="46" rx="8" fill="#e0f2fe" stroke="#7dd3fc"/>
+<text x="76" y="72" font-size="13" text-anchor="middle" fill="#0369a1">원본 문서</text>
+<rect x="176" y="28" width="124" height="76" rx="8" fill="#fef9c3" stroke="#fde047"/>
+<text x="238" y="48" font-size="12" text-anchor="middle" fill="#854d0e">청크 A</text>
+<text x="238" y="70" font-size="12" text-anchor="middle" fill="#854d0e">청크 B</text>
+<text x="238" y="92" font-size="12" text-anchor="middle" fill="#854d0e">청크 C</text>
+<rect x="340" y="28" width="120" height="154" rx="12" fill="#eef2ff" stroke="#c7d2fe"/>
+<text x="400" y="50" font-size="13" text-anchor="middle" fill="#4338ca">벡터 DB</text>
+<circle cx="374" cy="82" r="5" fill="#4f46e5"/>
+<circle cx="408" cy="98" r="5" fill="#4f46e5"/>
+<circle cx="432" cy="78" r="5" fill="#4f46e5"/>
+<circle cx="392" cy="126" r="5" fill="#4f46e5"/>
+<circle cx="426" cy="146" r="5" fill="#4f46e5"/>
+<rect x="486" y="44" width="62" height="46" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+<text x="517" y="72" font-size="13" text-anchor="middle" fill="#4c1d95">LLM</text>
+<rect x="16" y="140" width="120" height="46" rx="8" fill="#dcfce7" stroke="#bbf7d0"/>
+<text x="76" y="168" font-size="13" text-anchor="middle" fill="#166534">사용자 질문</text>
+<rect x="176" y="140" width="124" height="46" rx="8" fill="#fee2e2" stroke="#fecaca"/>
+<text x="238" y="168" font-size="13" text-anchor="middle" fill="#b91c1c">질문 벡터 Q</text>
+<g stroke="currentColor" stroke-opacity="0.5" stroke-width="1.5" fill="none">
+<line x1="140" y1="67" x2="172" y2="67" marker-end="url(#ah)"/>
+<line x1="304" y1="67" x2="336" y2="74" marker-end="url(#ah)"/>
+<line x1="140" y1="163" x2="172" y2="163" marker-end="url(#ah)"/>
+<line x1="304" y1="163" x2="336" y2="150" marker-end="url(#ah)"/>
+<line x1="460" y1="70" x2="484" y2="67" marker-end="url(#ah)"/>
+</g>
+<g font-size="11" fill="currentColor" fill-opacity="0.6" text-anchor="middle">
+<text x="156" y="58">청킹</text>
+<text x="322" y="50">임베딩·저장</text>
+<text x="156" y="132">임베딩</text>
+<text x="322" y="134">검색</text>
+<text x="472" y="56">생성</text>
+</g>
+<defs>
+<marker id="ah" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto">
+<path d="M0,0 L7,3 L0,6 z" fill="currentColor"/>
+</marker>
+</defs>
+</svg>
+</div>
+<div class="note">
+벡터 DB는 가운데에서 “질문 벡터(Q)와 가까운 청크 벡터”를 골라내는 역할을 합니다.
+</div>
+
+<h3>9.3 RAG에서 벡터 관련 개념이 쓰이는 지점</h3>
+<table>
+<thead>
+<tr>
+<th>단계</th>
+<th>벡터 관련 개념</th>
+<th>설명</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>임베딩 생성</td>
+<td>벡터, 차원 수</td>
+<td>문서와 질문을 같은 차원의 벡터로 변환 (예: 768, 1536 차원)</td>
+</tr>
+<tr>
+<td>저장</td>
+<td>HNSW / IVF-PQ</td>
+<td>벡터를 빠르게 찾기 위해 인덱스를 생성 (그래프 기반, 클러스터+압축 기반)</td>
+</tr>
+<tr>
+<td>검색</td>
+<td>ANN, 코사인 / 유클리드</td>
+<td>질문 벡터와 가장 가까운 벡터들을 근사적으로 빠르게 찾음</td>
+</tr>
+<tr>
+<td>재정렬(선택)</td>
+<td>유사도 점수</td>
+<td>top-k 후보 중에서 유사도 점수로 다시 정렬, 상위 몇 개만 LLM에 전달</td>
+</tr>
+</tbody>
+</table>
+
+<h3>9.4 실무에서의 간단한 선택 가이드</h3>
+<ul>
+<li>텍스트/문서 RAG → <strong>코사인 유사도 + HNSW</strong> 조합이 무난하고 많이 쓰입니다.</li>
+<li>데이터가 정말 많고, 비용을 아끼고 싶다 → <strong>IVF-PQ</strong> 고려.</li>
+<li>임베딩 모델이 바뀌면 → <strong>차원이 달라질 수 있으니</strong> 컬렉션을 분리하거나 재생성 필요.</li>
+</ul>
+<div class="note">
+요약하면, RAG에서 벡터 DB는  
+<strong>“질문에 가장 잘 맞는 자료를 골라서 LLM에게 건네주는 검색 엔진”</strong> 역할을 합니다.  
+ANN / HNSW / IVF-PQ / 코사인 유사도는 그 검색 엔진의 <strong>튜닝 옵션</strong>에 가깝습니다.
+</div>
+
+<h2>10. mem0와 Milvus: 벡터 메모리 레이어 예시</h2>
+<span class="pill">mem0</span>
+<span class="pill">Milvus</span>
+<span class="pill-outline">장기 메모리 + 벡터 DB</span>
+
+<div class="two-col">
+<div>
+<h3>10.1 mem0는 무엇을 하고, Milvus는 어디에 쓰일까?</h3>
+<p>
+<strong>mem0</strong>는 LLM용 <strong>“장기 메모리 레이어”</strong>라고 볼 수 있습니다.
+</p>
+<ul>
+<li>대화 내용, 사용자 정보, 과거 요청/응답 등을 <strong>“기억”</strong>으로 관리</li>
+<li>이 기억들을 텍스트 그대로만 두지 않고, <strong>임베딩 벡터</strong>로도 만들어 둠</li>
+<li>“예전에 한 말”과 <strong>비슷한 상황이 오면</strong>, 그 기억을 다시 찾아서 LLM에 공급</li>
+</ul>
+<p>
+이때, <strong>“기억 벡터를 저장하고 빨리 찾는 역할”</strong>을 Milvus가 담당할 수 있습니다.
+</p>
+<div class="note">
+정리하면:  
+<strong>mem0 = 어떤 것을 기억할지/어떻게 요약·병합할지 결정</strong>  
+<strong>Milvus = 그 기억들을 벡터 공간에서 빠르게 검색</strong>
+</div>
+</div>
+<div>
+<h3>10.2 구성 예시 코드 (개념용)</h3>
+<p>mem0 설정에서 Milvus를 벡터 스토어로 지정하는 예시는 다음과 같습니다:</p>
+
+```
+from mem0 import Memory
+
+config = {
+    "vector_store": {
+        "provider": "milvus",
+        "config": {
+            "collection_name": "mem0_memory",
+            "embedding_model_dims": 1536,
+            "url": "http://localhost:19530",   # Milvus 서버 주소(기본 포트 19530)
+            "db_name": "mem0_db",
+        }
+    }
+}
+
+memory = Memory.from_config(config)
+```
+
+<ul>
+<li>`provider: "milvus"` → 벡터 검색을 Milvus에게 맡기겠다는 의미</li>
+<li>`collection_name` → “기억”을 저장할 Milvus 컬렉션 이름</li>
+<li>`embedding_model_dims` → 사용하는 임베딩 모델의 차원 수</li>
+</ul>
+</div>
+</div>
+
+<div class="svg-box">
+<svg viewBox="0 0 600 236" role="img" aria-label="mem0 + Milvus 메모리 레이어 구조도">
+<text x="16" y="24" font-size="12" fill="currentColor" fill-opacity="0.65">① 저장 (기억 만들기)</text>
+<rect x="16" y="34" width="120" height="48" rx="8" fill="#fef3c7" stroke="#fde68a"/>
+<text x="76" y="63" font-size="12" text-anchor="middle" fill="#92400e">대화·이벤트</text>
+<rect x="160" y="34" width="128" height="48" rx="8" fill="#eef2ff" stroke="#c7d2fe"/>
+<text x="224" y="63" font-size="12" text-anchor="middle" fill="#4338ca">mem0 선별</text>
+<rect x="312" y="34" width="96" height="48" rx="8" fill="#dcfce7" stroke="#bbf7d0"/>
+<text x="360" y="63" font-size="12" text-anchor="middle" fill="#166534">임베딩</text>
+<rect x="432" y="34" width="152" height="48" rx="8" fill="#e0f2fe" stroke="#7dd3fc"/>
+<text x="508" y="63" font-size="12" text-anchor="middle" fill="#0369a1">Milvus 저장</text>
+<text x="16" y="142" font-size="12" fill="currentColor" fill-opacity="0.65">② 검색 (기억 꺼내기)</text>
+<rect x="16" y="152" width="120" height="48" rx="8" fill="#ccfbf1" stroke="#5eead4"/>
+<text x="76" y="181" font-size="12" text-anchor="middle" fill="#0f766e">새 질문</text>
+<rect x="160" y="152" width="128" height="48" rx="8" fill="#eef2ff" stroke="#c7d2fe"/>
+<text x="224" y="181" font-size="12" text-anchor="middle" fill="#4338ca">mem0 검색</text>
+<rect x="312" y="152" width="96" height="48" rx="8" fill="#e0f2fe" stroke="#7dd3fc"/>
+<text x="360" y="181" font-size="12" text-anchor="middle" fill="#0369a1">Milvus 조회</text>
+<rect x="432" y="152" width="152" height="48" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+<text x="508" y="181" font-size="12" text-anchor="middle" fill="#4c1d95">LLM 답변</text>
+<g stroke="currentColor" stroke-opacity="0.5" stroke-width="1.5" fill="none">
+<line x1="136" y1="58" x2="158" y2="58" marker-end="url(#ah2)"/>
+<line x1="288" y1="58" x2="310" y2="58" marker-end="url(#ah2)"/>
+<line x1="408" y1="58" x2="430" y2="58" marker-end="url(#ah2)"/>
+<line x1="136" y1="176" x2="158" y2="176" marker-end="url(#ah2)"/>
+<line x1="288" y1="176" x2="310" y2="176" marker-end="url(#ah2)"/>
+<line x1="408" y1="176" x2="430" y2="176" marker-end="url(#ah2)"/>
+</g>
+<defs>
+<marker id="ah2" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto">
+<path d="M0,0 L7,3 L0,6 z" fill="currentColor"/>
+</marker>
+</defs>
+</svg>
+</div>
+
+<div class="note">
+흐름을 요약하면:
+<br/>1) LLM 대화/이벤트 → mem0가 “기억할 것”을 선별
+<br/>2) 그 내용을 임베딩하여 Milvus에 저장
+<br/>3) 새 질문이 들어오면, mem0가 Milvus에서 <strong>비슷한 기억 벡터</strong>를 검색
+<br/>4) 찾은 기억을 LLM에 함께 넘겨서, <strong>“컨텍스트를 아는 답변”</strong>을 만들게 합니다.
+</div>
+
+<h2>11. 한 문장씩 다시 정리</h2>
+<ul>
+<li><strong>유클리드 거리</strong> → 점과 점 사이의 직선 거리</li>
+<li><strong>코사인 유사도</strong> → 벡터 방향의 비슷함 (각도)</li>
+<li><strong>ANN</strong> → “거의 가장 가까운 것”을 빠르게 찾는 전략</li>
+<li><strong>HNSW</strong> → 그래프를 여러 층으로 쌓아 위에서 아래로 내려가며 탐색</li>
+<li><strong>IVF-PQ</strong> → 클러스터링 후, 그 안을 압축해서 빠르게 찾기</li>
+<li><strong>RAG에서 벡터</strong> → 질문과 문서를 같은 벡터 공간에 올려두고, <strong>“서로 가까운 것끼리 매칭”</strong>하는 기술</li>
+<li><strong>mem0 + Milvus</strong> → 대화/사용자 히스토리를 벡터로 저장·검색해서, <strong>LLM에게 “장기 기억”을 붙여주는 구조</strong></li>
+</ul>
+<div class="note">
+앞으로 Milvus / Qdrant / RAG / mem0 관련 문서를 볼 때,
+“아, 이건 결국 <strong>어떤 임베딩 + 어떤 거리(metric) + 어떤 ANN 인덱스 + 어떤 메모리 레이어</strong>를 쓰는지 이야기구나”
+정도만 떠올려도 훨씬 편하게 이해하실 수 있을 것입니다.
+</div>
