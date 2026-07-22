@@ -219,14 +219,19 @@ a.tag:hover { border-color: var(--accent); color: var(--accent); }
   border: 1px solid color-mix(in oklab, var(--accent) 32%, transparent);
 }
 :root[data-theme='dark'] .prose .pill { color: var(--accent); }
+.prose .fullname {
+  display: block; margin-top: .2em;
+  font-family: var(--font-mono); font-size: .68rem; font-weight: 400;
+  letter-spacing: .01em; color: var(--ink-soft); opacity: .85;
+}
+
 .prose .pill-outline { border: 1px solid var(--line); color: var(--ink-soft); }
 .prose .badge { background: var(--paper-sunk); border: 1px solid var(--line-soft); color: var(--ink-soft); }
 
 /* 사이드 노트 / 콜아웃 */
 .prose .note {
   font-size: .92rem; color: var(--ink-soft);
-  background: var(--paper-card); border: 1px solid var(--line-soft);
-  border-left: 3px solid var(--accent);
+  background: var(--paper-sunk);
   border-radius: var(--radius-sm); padding: .7em 1em; margin-top: .8em;
 }
 
