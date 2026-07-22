@@ -18,5 +18,6 @@ export const NAV = [
 
 export const SOCIAL = [
   { label: 'GitHub', href: 'https://github.com/hgeul' },
+  { label: 'Email', href: 'mailto:chg9252@gmail.com' },
   // 필요 시 추가: { label: 'LinkedIn', href: '...' },
 ];

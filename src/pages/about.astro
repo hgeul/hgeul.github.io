@@ -40,6 +40,10 @@ import { SITE, SOCIAL } from '../consts';
 
       <h2>연락</h2>
       <p>
+        하고 싶은 말이나 같이 풀고 싶은 문제가 있으면 이메일로 편하게 주세요.
+        GitHub은 코드 보러 오는 곳이고요.
+      </p>
+      <p>
         {SOCIAL.map((s, i) => (
           <>{i > 0 && ' · '}<a href={s.href} target="_blank" rel="noopener noreferrer">{s.label}</a></>
         ))}
