@@ -1,0 +1,95 @@
+---
+title: "'그거'가 뭔지 AI는 몰랐다: 대화 기억을 붙이려다 mem0에 두 번 데인 이야기"
+description: 멀티턴 챗봇이 이전 대화를 기억하게 하려고 mem0를 붙였다가 만난 두 라이브러리 버그. import부터 막은 protobuf 디스크립터 충돌, 그리고 한 유저만 지우려다 전 유저 기억을 날린 delete_all.
+pubDate: 2026-07-25
+tags: ['mem0', 'RAG', 'Milvus', 'protobuf', '트러블슈팅']
+draft: false
+---
+
+멀티턴 챗봇을 만들다 보면 이런 데서 막힌다.
+
+<div class="chat">
+<div class="turn user"><span class="avatar">🧑</span><div class="bubble">예약 취소 규정이 어떻게 되나요?</div></div>
+<div class="turn bot"><span class="avatar">🤖</span><div class="bubble">예약 취소 규정을 안내해 드릴게요.</div></div>
+<div class="turn user"><span class="avatar">🧑</span><div class="bubble">그거 어떻게 하면 돼요?</div></div>
+<div class="turn bot"><span class="avatar">🤖</span><div class="bubble">결제를 취소하시려는 건가요? 결제 취소는 주문 내역에서 하실 수 있어요.</div></div>
+</div>
+
+"그거"가 예약 취소라는 걸 사람은 앞 대화로 안다. 그런데 챗봇은 질문을 하나씩 따로 받아서, "그거 어떻게"만 보고는 뭘 묻는지 모른다. 그래서 방금처럼 엉뚱하게 결제 취소를 안내한다. 앞 대화를 기억해 대명사를 풀어주고, 나아가 사용자가 뭘 자주 찾는지까지 기억하게 하고 싶었다. 이런 "AI의 기억"을 대신 해주는 라이브러리가 있어서, 직접 만드는 대신 메모리 레이어를 붙이기로 했다.
+
+## mem0가 뭔가, 왜 골랐나
+
+후보는 [memori](https://discuss.pytorch.kr/t/memori-llm-ai-sql/8922)와 [mem0](https://docs.mem0.ai/) 둘이었다. 둘 다 대화에서 핵심 사실(Fact)을 뽑아 저장하는 오픈소스 메모리 레이어다. 갈리는 건 저장 방식이다. memori는 관계형 DB(SQL)에 넣고, mem0는 벡터로 넣는다.
+
+mem0가 하는 일을 좀 더 풀면 이렇다. 대화를 원문 그대로 쌓는 대신, LLM이 거기서 핵심 사실(Fact)만 뽑아 저장한다(예: "예약 취소는 마이페이지에서 한다"). 대화가 길어져도 원문 전체가 아니라 추출한 Fact 수십 개만 남는다. 새 질문이 오면 관련 Fact를 찾아 LLM에 함께 넣어준다.
+
+내 목적이 딱 이거였다. 대화 맥락으로 대명사를 풀고("그거" → "예약 취소"), 사용자 프로파일을 기억하는 것. 게다가 RAG 검색을 이미 벡터(Milvus)로 하고 있어서, 같은 벡터 방식인 mem0가 스택에 자연스럽게 붙었다. 그래서 mem0로 정했고, 벡터도 쓰던 Milvus에 저장하기로 했다. 이 선택이 뒤에서 사고로 이어진다.
+
+기능 자체는 금방 붙었다. 정작 시간을 잡아먹은 건 mem0가 딸고 온 라이브러리 두 개였다. `import` 한 줄에서 한 번, `delete` 한 번에서 또 한 번 데였다.
+
+## import부터 막혔다: protobuf 디스크립터 충돌
+
+mem0를 `import` 하는 순간 에러가 나며 죽었다. 범인은 protobuf였다.
+
+protobuf는 데이터 형식을 미리 정의해두는 도구다(구글이 만들었고, 많은 라이브러리가 내부 통신에 쓴다). 프로그램이 시작할 때 이 형식 정의 파일(`.proto`)을 **전역 목록에 파일명으로 하나씩** 등록하는데, 같은 파일명이 두 번 등록되려 하면 "이미 있다"며 거부한다.
+
+하필 `qdrant-client`와 `pymilvus`가 둘 다 `common.proto`라는 같은 이름의 정의를 들고 있었다. 한 프로세스에서 같이 로드되니 뒤에 온 쪽이 "A file with this name is already in the pool"이라며 죽었다. 에러가 물고 늘어진 `_POINTID`는 qdrant 쪽 정의의 심볼이었다.
+
+황당한 건 우리는 벡터스토어로 Milvus만 쓴다는 점이다. qdrant는 안 쓰는데, mem0가 `import` 과정에서 `qdrant_client`를 끌어오면서 그 proto가 pymilvus proto와 부딪혔다. 안 쓰는 의존성이 딸려와 터뜨린 셈이다.
+
+흔한 해법부터 시도했다. `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python` 환경변수로 순수 파이썬 구현으로 바꾸는 방법인데, 우리 버전 조합에선 `_POINTID` 에러가 안 풀렸다.
+
+그래서 원천을 막았다. **mem0를 import 하기 전에 `qdrant_client`를 stub 모듈로 선등록**해서, 그 proto가 애초에 로드되지 않게 했다. 단 빈 모듈만 넣으면 mem0가 `from qdrant_client import QdrantClient` 하다가 `ImportError`가 난다. mem0가 참조하는 이름(`QdrantClient`, `models`)만 빈 껍데기로 채워두면, import는 통과하면서 실제 proto는 안 올라온다.
+
+<details>
+<summary>stub 선등록 (개념 최소 예제)</summary>
+
+```python
+import sys, types
+
+def stub_qdrant_client():
+    # mem0가 import 시 qdrant_client를 끌어온다. 그 proto(common.proto)가
+    # pymilvus proto와 파일명·심볼(_POINTID)이 겹쳐 전역 풀에서 충돌한다.
+    # Milvus만 쓰므로, 실제 qdrant_client 대신 빈 stub을 먼저 등록해 막는다.
+    if "qdrant_client" in sys.modules:
+        return
+    stub = types.ModuleType("qdrant_client")
+    stub.QdrantClient = type("QdrantClient", (), {})       # mem0 import가 찾는 이름만 채운다
+    stub.models = types.ModuleType("qdrant_client.models")
+    sys.modules["qdrant_client"] = stub
+    sys.modules["qdrant_client.models"] = stub.models
+
+stub_qdrant_client()
+from mem0 import Memory  # 이제 qdrant proto가 안 올라와 충돌이 안 난다
+```
+
+</details>
+
+정공법은 protobuf 패키징을 고치거나 버전을 맞추는 것이지만, 우리 쪽에서 손댈 수 있는 범위가 아니었다. 안 쓰는 벡터스토어를 로드조차 안 하게 막는 게 가장 확실했다.
+
+덧붙이면, qdrant도 이 충돌 때문에 나중에 자기 `common.proto`를 `qdrant_common.proto`로 이름을 바꿨다. 버전에 묶인 문제라, 최신 조합에선 이 에러를 아예 안 볼 수도 있다. 우리가 겪은 건 그 전의 특정 버전 조합에서였다.
+
+## delete 한 번에 컬렉션이 통째로 비었다: delete_all
+
+두 번째는 더 아팠다. 개발 중에 한 사용자의 대화 메모리만 지우려고 `delete_all(user_id=...)`를 호출했는데, **테스트 컬렉션이 통째로 비었다.**
+
+문서만 보면 이럴 리 없다. mem0의 `delete_all`은 user, agent, run, 메타데이터 기준으로 **필터해서 지운다**고 돼 있다. 그런데 구현이 문서와 달랐다. `delete_all`이 내부에서 `vector_store.reset()`을 호출하는데, 이게 **컬렉션을 통째로 DROP하고 다시 만든다.** 필터는 무시되고 전부 날아간다.
+
+혼자 겪은 게 아니었다. mem0 GitHub에 이슈로 올라와 있다 ([#3928](https://github.com/mem0ai/mem0/issues/3928): "delete_all이 filter 대신 reset()을 호출해 전 유저 메모리를 지운다", [#3746](https://github.com/mem0ai/mem0/issues/3746)). 문서와 구현이 어긋난, 알려진 버그였다.
+
+해결은 단순하다. `delete_all`을 쓰지 않고, 지울 메모리를 조회해서 **개별 삭제를 반복**했다. 느리지만 안전하다.
+
+두 버그를 잡고 나니, 처음 목표대로 됐다. 이제 챗봇은 "그거"를 앞 대화로 풀어 예약 취소를 제대로 안내하고, 사용자 프로파일도 기억한다.
+
+## 남는 교훈
+
+- **안 쓰는 의존성도 딸려온다.** Milvus만 쓰는데 qdrant proto가 터뜨렸다. `import`가 실패하면 내가 직접 쓰는 코드만 보지 말고, 그 라이브러리가 무엇을 같이 끌어오는지 본다.
+- **문서가 말하는 동작과 구현은 다를 수 있다.** 특히 삭제처럼 되돌릴 수 없는 연산은 문서를 믿지 말고 실제로 한 번 확인하고 쓴다. `delete_all` 한 줄이 테스트 컬렉션을 통째로 지웠다.
+- **버그를 만나면 이슈 트래커부터.** 두 문제 다 남들이 먼저 겪고 올려둔 게 있었다. 검색 몇 분이 삽질 몇 시간을 줄인다.
+
+## 참고
+
+- protobuf 디스크립터 풀 충돌: [protocolbuffers/protobuf #12882](https://github.com/protocolbuffers/protobuf/issues/12882), [#6550](https://github.com/protocolbuffers/protobuf/issues/6550)
+- qdrant-client의 `common.proto` 개명(충돌 회피): [qdrant/qdrant-client](https://github.com/qdrant/qdrant-client)
+- mem0 delete_all 버그: [mem0ai/mem0 #3928](https://github.com/mem0ai/mem0/issues/3928), [#3746](https://github.com/mem0ai/mem0/issues/3746)
+- mem0 delete 공식 문서: [docs.mem0.ai](https://docs.mem0.ai/core-concepts/memory-operations/delete)
