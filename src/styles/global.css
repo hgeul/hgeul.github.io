@@ -241,6 +241,29 @@ a.tag:hover { border-color: var(--accent); color: var(--accent); }
   border-radius: var(--radius); padding: 1.1em 1.3em; box-shadow: var(--shadow);
 }
 
+/* 대화창 (챗봇 왼쪽 / 사용자 오른쪽) */
+.prose .chat { display: flex; flex-direction: column; gap: .55rem; margin: 1.2em 0; }
+.prose .chat .turn { display: flex; align-items: flex-end; gap: .45rem; max-width: 85%; }
+.prose .chat .turn.bot { align-self: flex-start; }
+.prose .chat .turn.user { align-self: flex-end; flex-direction: row-reverse; }
+.prose .chat .avatar {
+  flex: 0 0 auto; width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: 1rem; line-height: 1;
+  background: var(--paper-sunk); border: 1px solid var(--line-soft);
+}
+.prose .chat .bubble {
+  padding: .5em .8em; border-radius: 14px; font-size: .95rem; line-height: 1.55;
+}
+.prose .chat .turn.bot .bubble {
+  border-bottom-left-radius: 4px;
+  background: var(--paper-sunk); border: 1px solid var(--line-soft); color: var(--ink);
+}
+.prose .chat .turn.user .bubble {
+  border-bottom-right-radius: 4px;
+  background: color-mix(in oklab, var(--accent) 16%, var(--paper));
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent); color: var(--ink);
+}
+
 /* 반응형 2단 (좁으면 자동으로 1단) */
 .prose .two-col {
   display: grid;
