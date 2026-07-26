@@ -26,3 +26,6 @@ pnpm-debug.log*
 
 # 크래시 덤프 등 잡파일
 *.stackdump
+
+# 내부 작업노트(ADR·정책·백로그): 공개 repo 에 올리지 않음
+docs/
