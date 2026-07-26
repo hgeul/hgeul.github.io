@@ -8,15 +8,25 @@ interface Props {
   title?: string;
   description?: string;
   image?: string;
+  type?: 'website' | 'article';
+  publishedDate?: Date;
+  updatedDate?: Date;
 }
-const { title, description, image } = Astro.props;
-const fullTitle = title ? `${title} — ${SITE.title}` : `${SITE.title} · ${SITE.tagline}`;
+const { title, description, image, type, publishedDate, updatedDate } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.title}` : `${SITE.title} · ${SITE.tagline}`;
 ---
 
 <!doctype html>
 <html lang={SITE.lang}>
   <head>
-    <BaseHead title={fullTitle} description={description} image={image} />
+    <BaseHead
+      title={fullTitle}
+      description={description}
+      image={image}
+      type={type}
+      publishedDate={publishedDate}
+      updatedDate={updatedDate}
+    />
   </head>
   <body>
     <Header />

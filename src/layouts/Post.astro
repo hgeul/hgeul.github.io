@@ -8,7 +8,7 @@ const { post } = Astro.props;
 const { title, description, pubDate, updatedDate, tags } = post.data;
 ---
 
-<Base title={title} description={description}>
+<Base title={title} description={description} type="article" publishedDate={pubDate} updatedDate={updatedDate}>
   <article class="container reading post">
     <header class="post-head rise">
       <div class="meta mono">
