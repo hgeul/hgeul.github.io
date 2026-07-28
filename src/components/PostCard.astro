@@ -72,5 +72,6 @@ const { href, title, description, pubDate, tags = [], index = 0 } = Astro.props;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; padding-top: .3rem; position: relative; z-index: 2; }
+  .tags { display: flex; flex-wrap: nowrap; overflow: hidden; gap: .4rem; margin-top: auto; padding-top: .3rem; position: relative; z-index: 2; }
+  .tags .tag { flex: 0 0 auto; white-space: nowrap; }
 </style>

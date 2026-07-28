@@ -58,7 +58,7 @@ const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
   .tag .n { color: var(--ink-faint); margin-left: .2em; }
   .tag.is-active { border-color: var(--accent); color: var(--accent); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.1rem; }
-  .cell { display: flex; }
+  .cell { display: flex; flex-direction: column; }
   .cell[hidden] { display: none; }
   .empty { color: var(--ink-faint); padding: 2rem 0; }
 </style>
