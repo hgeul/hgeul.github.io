@@ -11,7 +11,7 @@
   --paper-sunk: #eae5da;   /* 눌린 면(코드 등) */
   --ink:        #1b1a16;   /* 본문 잉크(따뜻한 near-black) */
   --ink-soft:   #4c4a43;   /* 보조 텍스트 */
-  --ink-faint:  #8b877b;   /* 흐린 메타 */
+  --ink-faint:  #726d61;   /* 흐린 메타 (WCAG 4.5:1 충족) */
   --line:       #dcd6c8;   /* 헤어라인 */
   --line-soft:  #e7e2d6;
   --accent:     #e4471f;   /* 시그널 액센트: vermilion */
@@ -40,7 +40,7 @@
   --paper-sunk: #201e19;
   --ink:        #ece7db;
   --ink-soft:   #b3ad9f;
-  --ink-faint:  #7d786c;
+  --ink-faint:  #857f71;
   --line:       #2c2a24;
   --line-soft:  #232019;
   --accent:     #ff5a34;
@@ -55,7 +55,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --paper:#100f0d; --paper-card:#191712; --paper-sunk:#201e19;
-    --ink:#ece7db; --ink-soft:#b3ad9f; --ink-faint:#7d786c;
+    --ink:#ece7db; --ink-soft:#b3ad9f; --ink-faint:#857f71;
     --line:#2c2a24; --line-soft:#232019;
     --accent:#ff5a34; --accent-deep:#ff7351; --on-accent:#14120e;
     color-scheme: dark;
