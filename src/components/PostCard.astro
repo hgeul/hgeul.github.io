@@ -33,6 +33,7 @@ const { href, title, description, pubDate, tags = [], index = 0 } = Astro.props;
     display: flex;
     flex-direction: column;
     gap: .7rem;
+    height: 100%;
     padding: 1.5rem 1.6rem 1.55rem;
     background: var(--paper-card);
     border: 1px solid var(--line-soft);
@@ -58,8 +59,18 @@ const { href, title, description, pubDate, tags = [], index = 0 } = Astro.props;
     font-size: 1.32rem;
     line-height: 1.25;
     transition: color .2s var(--ease);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
   .card:hover .title { color: var(--accent); }
-  .desc { color: var(--ink-soft); font-size: .98rem; line-height: 1.6; }
-  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .2rem; position: relative; z-index: 2; }
+  .desc {
+    color: var(--ink-soft); font-size: .98rem; line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: auto; padding-top: .3rem; position: relative; z-index: 2; }
 </style>
