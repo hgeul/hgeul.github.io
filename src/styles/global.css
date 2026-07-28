@@ -192,7 +192,8 @@ a.tag:hover { border-color: var(--accent); color: var(--accent); }
   overflow-x: auto;
   line-height: 1.55;
 }
-.prose table { width: 100%; border-collapse: collapse; font-size: .95rem; display: block; overflow-x: auto; }
+.prose table { width: 100%; border-collapse: collapse; font-size: .95rem; table-layout: auto; }
+@media (max-width: 640px) { .prose table { display: block; overflow-x: auto; } }
 .prose th, .prose td { border: 1px solid var(--line); padding: .55em .8em; text-align: left; }
 .prose th { background: var(--paper-sunk); font-weight: 600; }
 
