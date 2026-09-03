@@ -2,6 +2,7 @@
 title: "'그거'가 뭔지 AI는 몰랐다: 대화 기억을 붙이려다 mem0에 두 번 데인 이야기"
 description: 멀티턴 챗봇이 이전 대화를 기억하게 하려고 mem0를 붙였다가 만난 두 라이브러리 버그. import부터 막은 protobuf 디스크립터 충돌, 그리고 한 유저만 지우려다 전 유저 기억을 날린 delete_all.
 pubDate: 2026-07-25
+updatedDate: 2026-09-03
 tags: ['mem0', 'RAG', 'Milvus', 'protobuf', '트러블슈팅']
 draft: false
 ---
@@ -77,7 +78,7 @@ from mem0 import Memory  # 이제 qdrant proto가 안 올라와 충돌이 안 �
 
 혼자 겪은 게 아니었다. mem0 GitHub에 이슈로 올라와 있다 ([#3928](https://github.com/mem0ai/mem0/issues/3928): "delete_all이 filter 대신 reset()을 호출해 전 유저 메모리를 지운다", [#3746](https://github.com/mem0ai/mem0/issues/3746)). 문서와 구현이 어긋난, 알려진 버그였다.
 
-해결은 단순하다. `delete_all`을 쓰지 않고, 지울 메모리를 조회해서 **개별 삭제를 반복**했다. 느리지만 안전하다.
+`delete_all`은 빼고, 지울 메모리를 조회한 뒤 **개별 삭제를 반복**했다. 느리지만 테스트 컬렉션 전체가 비는 일은 없었다.
 
 두 버그를 잡고 나니, 처음 목표대로 됐다. 이제 챗봇은 "그거"를 앞 대화로 풀어 예약 취소를 제대로 안내하고, 사용자 프로파일도 기억한다.
 

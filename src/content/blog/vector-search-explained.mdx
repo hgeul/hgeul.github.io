@@ -2,14 +2,14 @@
 title: "말하는 감자도 이해하는 벡터 검색 (ANN·HNSW·IVF-PQ·코사인)"
 description: Milvus·Qdrant 설정에서 마주치는 HNSW, 코사인 유사도, ANN, 그리고 Milvus의 IVF-PQ가 각각 무슨 일을 하는지 그림으로 정리한다. RAG·mem0에서 벡터가 어디에 쓰이는지까지.
 pubDate: 2025-11-25
-updatedDate: 2026-07-22
+updatedDate: 2026-09-03
 tags: ['벡터검색', 'RAG', 'HNSW', 'IVF-PQ', '임베딩']
 draft: false
 ---
 
-RAG 스택을 굴리다 보면 벡터 DB 설정 파일을 계속 마주친다. `index_type: HNSW`, `metric_type: COSINE`, 어떤 케이스에선 `IVF_PQ`. 그때마다 "이게 정확히 뭐 하는 옵션이더라" 하고 멈칫했다. 매번 문서를 다시 뒤지기 싫어서 한 번 정리해 뒀다. ([RAG 회고글](/blog/rag-pipeline-graphdb-lessons)에서 결국 벡터 검색 + 유사도로 충분했다고 적었는데, 그 벡터 검색이 안에서 뭘 하는지가 이 글이다.)
+RAG 스택을 만질 때마다 벡터 DB 설정에서 멈췄다. `index_type: HNSW`, `metric_type: COSINE`, 가끔은 `IVF_PQ`. 이름은 아는데, 이 값을 왜 고르는지는 매번 문서를 다시 봐야 했다. ([RAG 회고글](/blog/rag-pipeline-graphdb-lessons)에서 Vector 검색과 임베딩 유사도로 충분했던 이유도 여기서 나온다.)
 
-수학적으로 완벽한 설명은 아니다. 설정 창에서 용어를 보고 "아 이건 이런 거지" 하고 넘어갈 수 있는 정도의 직관이 목표다.
+여기서는 설정을 열었을 때 판단에 필요한 만큼만 풀었다. 수학 교과서식 정의보다, 각 옵션이 검색 결과와 비용에 무엇을 바꾸는지에 초점을 맞췄다.
 
 <h2>1. 용어 한 줄 요약</h2>
 <p>
@@ -602,5 +602,5 @@ memory = Memory.from_config(config)
 </tbody>
 </table>
 <div class="note">
-Milvus, Qdrant, RAG, mem0 관련 문서를 볼 때 "결국 어떤 임베딩 + 어떤 거리(metric) + 어떤 ANN 인덱스 + 어떤 메모리 레이어를 쓰는지"로 나눠 읽으면 대부분 정리된다.
+설정 파일에서는 먼저 임베딩 모델, 거리 척도, ANN 인덱스를 따로 본다. 이 셋이 정해져야 RAG와 mem0에서 검색이 어떻게 달라지는지 읽힌다.
 </div>
